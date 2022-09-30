@@ -1,0 +1,137 @@
+import itertools
+import numpy as np
+import matplotlib.pyplot as plt
+from matplotlib.ticker import NullFormatter
+import pandas as pd
+import numpy as np
+import matplotlib.ticker as ticker
+from sklearn import preprocessing
+%matplotlib inline
+import warnings
+warnings.filterwarnings('ignore')
+
+#get file download
+!wget -O loan_train.csv https://cf-courses-data.s3.us.cloud-object-storage.appdomain.cloud/IBMDeveloperSkillsNetwork-ML0101EN-SkillsNetwork/labs/FinalModule_Coursera/data/loan_train.csv
+
+df = pd.read_csv('loan_train.csv')
+df.head()
+#OUTPUT:
+Unnamed: 0	Unnamed: 0.1	loan_status	Principal	terms	effective_date	due_date	age	education	Gender
+#0	0	0	PAIDOFF	1000	30	9/8/2016	10/7/2016	45	High School or Below	male
+#1	2	2	PAIDOFF	1000	30	9/8/2016	10/7/2016	33	Bechalor	female
+#2	3	3	PAIDOFF	1000	15	9/8/2016	9/22/2016	27	college	male
+#3	4	4	PAIDOFF	1000	30	9/9/2016	10/8/2016	28	college	female
+#4	6	6	PAIDOFF	1000	30	9/9/2016	10/8/2016	29	college	male
+
+df.shape()
+# OUTPUT: (346, 10)
+
+#convert to date time object
+df['due_date'] = pd.to_datetime(df['due_date'])
+df['effective_date'] = pd.to_datetime(df['effective_date'])
+df.head()
+#OUTPUT:
+Unnamed: 0	Unnamed: 0.1	loan_status	Principal	terms	effective_date	due_date	age	education	Gender
+0	0	0	PAIDOFF	1000	30	2016-09-08	2016-10-07	45	High School or Below	male
+1	2	2	PAIDOFF	1000	30	2016-09-08	2016-10-07	33	Bechalor	female
+2	3	3	PAIDOFF	1000	15	2016-09-08	2016-09-22	27	college	male
+3	4	4	PAIDOFF	1000	30	2016-09-09	2016-10-08	28	college	female
+4	6	6	PAIDOFF	1000	30	2016-09-09	2016-10-08	29	college	male
+
+#Data Visualization and PreProcessing
+
+df['loan_status'].value_counts()
+#OUTPUT:
+PAIDOFF       260
+COLLECTION     86
+Name: loan_status, dtype: int64
+
+!pip install seaborn
+import seaborn as sns
+bins = np.linspace(df.Principal.min(), df.Principal.max(), 10)
+g = sns.FacetGrid(df, col="Gender", hue="loan_status", palette="Set1", col_wrap=2)
+g.map(plt.hist, 'Principal', bins=bins, ec="k")
+g.axes[-1].legend()
+plt.show()
+#OUTPUT:
+
+bins = np.linspace(df.age.min(), df.age.max(), 10)
+g = sns.FacetGrid(df, col="Gender", hue="loan_status", palette="Set1", col_wrap=2)
+g.map(plt.hist, 'age', bins=bins, ec="k")
+
+g.axes[-1].legend()
+plt.show()
+#OUTPUT:
+
+#Day of the week people get the loans
+df['dayofweek'] = df['effective_date'].dt.dayofweek
+bins = np.linspace(df.dayofweek.min(), df.dayofweek.max(), 10)
+g = sns.FacetGrid(df, col="Gender", hue="loan_status", palette="Set1", col_wrap=2)
+g.map(plt.hist, 'dayofweek', bins=bins, ec="k")
+g.axes[-1].legend()
+plt.show()
+#OUTPUT:
+
+df['weekend'] = df['dayofweek'].apply(lambda x: 1 if (x>3)  else 0)
+df.head()
+#OUTPUT:
+	Unnamed: 0	Unnamed: 0.1	loan_status	Principal	terms	effective_date	due_date	age	education	Gender	dayofweek	weekend
+0	0	0	PAIDOFF	1000	30	2016-09-08	2016-10-07	45	High School or Below	male	3	0
+1	2	2	PAIDOFF	1000	30	2016-09-08	2016-10-07	33	Bechalor	female	3	0
+2	3	3	PAIDOFF	1000	15	2016-09-08	2016-09-22	27	college	male	3	0
+3	4	4	PAIDOFF	1000	30	2016-09-09	2016-10-08	28	college	female	4	1
+4	6	6	PAIDOFF	1000	30	2016-09-09	2016-10-08	29	college	male	4	1
+
+#Convert Categorical Features to Numeric Values
+df.groupby(['Gender'])['loan_status'].value_counts(normalize=True)
+#OUTPUT:
+Gender  loan_status
+female  PAIDOFF        0.865385
+        COLLECTION     0.134615
+male    PAIDOFF        0.731293
+        COLLECTION     0.268707
+Name: loan_status, dtype: float64
+
+#Convert Male to 0, Female to 1
+df['Gender'].replace(to_replace=['male','female'], value=[0,1],inplace=True)
+df.head()
+#OUTPUT:
+Unnamed: 0	Unnamed: 0.1	loan_status	Principal	terms	effective_date	due_date	age	education	Gender	dayofweek	weekend
+0	0	0	PAIDOFF	1000	30	2016-09-08	2016-10-07	45	High School or Below	0	3	0
+1	2	2	PAIDOFF	1000	30	2016-09-08	2016-10-07	33	Bechalor	1	3	0
+2	3	3	PAIDOFF	1000	15	2016-09-08	2016-09-22	27	college	0	3	0
+3	4	4	PAIDOFF	1000	30	2016-09-09	2016-10-08	28	college	1	4	1
+4	6	6	PAIDOFF	1000	30	2016-09-09	2016-10-08	29	college	0	4	1
+
+#ONE HOT ENCODING
+df.groupby(['education'])['loan_status'].value_counts(normalize=True)
+df[['Principal','terms','age','Gender','education']].head()
+Feature = df[['Principal','terms','age','Gender','weekend']]
+Feature = pd.concat([Feature,pd.get_dummies(df['education'])], axis=1)
+Feature.drop(['Master or Above'], axis = 1,inplace=True)
+Feature.head()
+#OUTPUT:
+Principal	terms	age	Gender	weekend	Bechalor	High School or Below	college
+0	1000	30	45	0	0	0	1	0
+1	1000	30	33	1	0	1	0	0
+2	1000	15	27	0	0	0	0	1
+3	1000	30	28	1	1	0	0	1
+4	1000	30	29	0	1	0	0	1
+
+#Feature Selection
+X = Feature
+X[0:5]
+y = df['loan_status'].values
+y[0:5]
+
+#Normalize Data
+X= preprocessing.StandardScaler().fit(X).transform(X)
+X[0:5]
+
+
+
+
+
+
+
+
