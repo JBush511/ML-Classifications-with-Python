@@ -6,6 +6,7 @@ from sklearn.metrics import log_loss
 
 test_df = pd.read_csv('loan_test.csv')
 
+#PREPROCESSING the new 'loan_test.csv' File##
 test_df['due_date'] = pd.to_datetime(test_df['due_date'])
 test_df['effective_date'] = pd.to_datetime(test_df['effective_date'])
 test_df['dayofweek'] = test_df['effective_date'].dt.dayofweek
